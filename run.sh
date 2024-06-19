@@ -27,16 +27,19 @@ if [ ! -f ${a}_mni0Rigid.txt ]; then
   python ${scriptpath}/model_apply_head_and_onlyhead.py $ba
 fi
 
-antsApplyTransforms -i $a.nii.gz -r $scriptpath/symboxR2.nii.gz -t "${a}_mni0Rigid.txt" -o aff_${a}.nii.gz -u float
-antsApplyTransforms -i $a.nii.gz -r $scriptpath/symboxR2.nii.gz -t $scriptpath/flip.itk.mat -t "${a}_mni0Rigid.txt" -o aff_sym_${a}.nii.gz -u float
-
 python $scriptpath/apply_run.py ${a}.nii.gz
 
-antsApplyTransforms -i aff_${a}_slabroi.nii.gz -r $1 -o ${a}_slab_roiL.nii.gz -t [ "${a}_mni0Rigid.txt",1]  -u uchar -n MultiLabel[0.1]
-antsApplyTransforms -i aff_sym_${a}_slabroi.nii.gz -r $1 -o ${a}_slab_roiR.nii.gz -t [ "${a}_mni0Rigid.txt",1] -t $scriptpath/flip.itk.mat -u uchar -n MultiLabel[0.1]
-
-/bin/rm  aff_${a}.nii.gz aff_sym_${a}.nii.gz 
-/bin/rm aff_${a}_slabroi.nii.gz aff_sym_${a}_slabroi.nii.gz
-
-echo ${a1} webp animated images for verification : aff_${a}*webp
-echo ${a1} output files ":" ${a}_slab_roiL.nii.gz ${a}_slab_roiR.nii.gz
+#/bin/rm ${a}_roiLeft.nii.gz ${a}_roiRightSym.nii.gz
+cat << END > ${a}_index_webp.html
+Image: ${a}<br/>
+Left side <br/>
+<img src=${a%%.nii.gz}_roiLeft_COR.webp>
+<img src=${a%%.nii.gz}_roiLeft_AX.webp><br/>
+Right side (mirrored)<br/>
+<img src=${a%%.nii.gz}_roiRightSym_AX.webp>
+<img src=${a%%.nii.gz}_roiRightSym_COR.webp><br/>
+<br/>${a%%.nii.gz}_masseter_volumesLR.csv: (mm3)
+<pre>
+END
+cat ${a%%.nii.gz}_masseter_volumesLR.csv >> ${a}_index_webp.html
+echo "</pre>">> ${a}_index_webp.html

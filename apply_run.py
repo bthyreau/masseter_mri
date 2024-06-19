@@ -5,17 +5,10 @@ import nibabel, os
 import numpy as np
 import scipy.ndimage
 
-
-
-import glob
 from PIL import Image
-     
-#allf = sorted(glob.glob("aff_*.nii.gz"))
-#allf = [x for x in allf if not x.endswith("_slabroi.nii.gz")]
-def make_webps(fn):
-    print("Generating webp for", fn)
-    m = np.asarray(nibabel.load(fn.replace(".nii.gz", "_slabroi.nii.gz")).dataobj)
-    d = nibabel.load(fn).get_fdata(dtype=np.float32)
+def make_webps(aff_fn_img, slabimg, outfn):
+    m = np.asarray(slabimg.dataobj)
+    d = aff_fn_img.get_fdata(dtype=np.float32)
     
     d -= d.min()
     d /= (d.max() / 300.).clip(0, 255)
@@ -30,8 +23,8 @@ def make_webps(fn):
         im = Image.fromarray(np.dstack([(ma==1)*255, tm*128, np.ones_like(ma)*16]).astype(np.uint8), mode="RGB")
         i.paste(im, mask=Image.fromarray(tm*56))
         out.append(i)
-
-    out[0].save('%s_AX.webp' % fn, save_all=True, append_images=out[1:], loop=0, duration=80)
+    
+    out[0].save(outfn + "_AX.webp", save_all=True, append_images=out[1:], loop=0, duration=80)
 
     
     min_slice, max_slice = np.where(np.diff(((m == 1) ).sum(1).sum(0) > 0 ))[0][:2]
@@ -44,9 +37,7 @@ def make_webps(fn):
         i.paste(im, mask=Image.fromarray(tm*56))
         out.append(i)
 
-    out[0].save('%s_COR.webp' % fn, save_all=True, append_images=out[1:], loop=0, duration=80)
-    print(" Done")
-
+    out[0].save(outfn + "_COR.webp", save_all=True, append_images=out[1:], loop=0, duration=80)
 
 class JawsModel2(nn.Module):
     def __init__(self):
@@ -119,7 +110,6 @@ class JawsModel2(nn.Module):
         x = torch.relu(self.bn1u(self.conv1u(x)))
 
         x = x + self.li1
-        #with concatenation istead of add, it would be "x = torch.cat([x, self.li1], axis=1)", but the number of kernels must be changed in the definition
         x = torch.relu(self.conv1v(x))
 
         x = F.interpolate(x, scale_factor=2, mode="nearest")
@@ -134,28 +124,10 @@ class JawsModel2(nn.Module):
         x = torch.sigmoid(x)
         return x
 
-# Landmarks
+# Camper plane Landmarks
 net1 = JawsModel2()
 scriptpath = os.path.dirname(os.path.realpath(__file__))
 device = torch.device("cpu")
-net1.load_state_dict(torch.load(scriptpath + "/torchparams/myworking_model4.pt", map_location=device), strict=False)
-
-device = "cpu"
-
-import sys
-fn = sys.argv[1]
-assert fn.endswith(".nii.gz")
-
-
-def read_mni0txt(filename_mni0txt):
-    f3 = np.array([[1, 1, -1, -1],[1, 1, -1, -1], [-1, -1, 1, 1], [1, 1, 1, 1]]) # ANTs LPS
-    p = np.array(open(filename_mni0txt).read().split("Parameters: ")[-1].split(), float)
-    return np.r_[np.c_[ p[:9].reshape(3,3), p[9:] ], [[0,0,0,1]]] / f3
-
-Mmni = read_mni0txt(fn.replace(".nii.gz", "_mni0Rigid.txt")) #"../../partialnii/hirosaki_H31120_mni0Affine.txt")
-
-
-
 
 
 import sys
@@ -169,60 +141,76 @@ if nibabel.aff2axcodes(img2.affine) != ("P","S","R"):
     img = nibabel.Nifti1Image(nibabel.orientations.apply_orientation(img2.dataobj, trn), img2.affine @ nibabel.orientations.inv_ornt_aff( trn, img2.shape)) #.to_filename("/tmp/test.nii.gz")
 else:
     img = img2
-#img = nibabel.load("/tmp/test.nii.gz")
 
 
-# The T1-MRI needs to have a resolution of 96x96x64 for the landmarks model to work, resample along axis
+# Due to model limitation, the T1-MRI needs to have a resolution of 96x96x64 for the landmarks model to work, resample along axis
 i = np.mgrid[:img.shape[0]-1:96j, :img.shape[1]-1:96j, :img.shape[2]-1:64j ]
+
+print(i.shape)
 fake_affine = img.affine.copy()
 assert nibabel.aff2axcodes(img.affine) == ("P","S","R"), "Voxel orientation error: the landmarks code function assume some orientation. The downsampling code should be fixed, but why bother"
 
 fake_affine[:3,:3] *= i.reshape(3, -1).max(1) / [95, 95, 63]
 d = scipy.ndimage.map_coordinates(img.get_fdata(dtype=np.float32), i, order=2)
+#nibabel.Nifti1Image(d, fake_affine).to_filename("/tmp/d.nii.gz")
 del i
 d -= d.mean()
 d /= d.std()
 
+net1.load_state_dict(torch.load(scriptpath + "/torchparams/myworking_model4.pt", map_location=device), strict=False)
+
+nibabel.Nifti1Image(d, fake_affine).to_filename("/tmp/d.nii.gz")
 with torch.no_grad():
     output = net1(torch.from_numpy(d.astype(np.float32)[None,None,:]).to(device))
 
-output[output < .5] = 0
+nibabel.Nifti1Image(np.rollaxis(np.asarray(output[0]), 0, 4), fake_affine).to_filename("/tmp/test2.nii.gz")
+output[output < .1] = 0
 output = np.asarray(output)
 centr_vox = np.array([scipy.ndimage.center_of_mass(m) + (1,) for m in output[0]])
 
-
 if np.any(np.isnan(centr_vox)):
-    print("Impossible to identify landmarks. Are you sure the masseter muscle is visible ?")
-
-
+    sys.exit("Impossible to identify landmarks. Are you sure the masseter muscle is visible ?")
+    # TODO: recover from this, we don't really care if it fails
 
 centr_mm = centr_vox @ fake_affine.T
 
-print("The three landmarks coordinates:\n", centr_mm[:,:3])
+print("The three landmarks coordinates of the Camper plane:\n", centr_mm[:,:3])
+del img, img2
 
 
 
 
 
-####
-#net2 = JawsModel()
+
 net1.load_state_dict(torch.load(scriptpath + "/torchparams/_params_jaws3l2_00299_00000.pt", map_location=device))
 
+def read_mni0txt(filename_mni0txt):
+    f3 = np.array([[1, 1, -1, -1],[1, 1, -1, -1], [-1, -1, 1, 1], [1, 1, 1, 1]]) # ANTs LPS
+    p = np.array(open(filename_mni0txt).read().split("Parameters: ")[-1].split(), float)
+    return np.r_[np.c_[ p[:9].reshape(3,3), p[9:] ], [[0,0,0,1]]] / f3
 
-#img = nibabel.load("../../partialnii/aff_sym_hirosaki_H31120.nii.gz")
-#affsym_fn = "../../partialnii/aff_sym_hirosaki_H31120.nii.gz"
+Mmni = read_mni0txt(fn.replace(".nii.gz", "_mni0Rigid.txt")) #"../../partialnii/hirosaki_H31120_mni0Affine.txt")
+
+rimg = nibabel.load(scriptpath + "/symboxR2.nii.gz")
+idx = np.indices(rimg.shape).reshape(3, -1)
+kidx = np.vstack([idx, idx[0]*0+1])
+
+
+fn = sys.argv[1]
+assert fn.endswith(".nii.gz")
+iimg = nibabel.load(fn)
+print(f"Processing {fn}")
+
 stats_vols = {}
-for side in "L", "R":
+for side in "Left", "RightSym":
 
-    if side == "L":
-        aff_fn = fn.replace(os.path.basename(fn), "aff_" + os.path.basename(fn))
-    else:
-        aff_fn = fn.replace(os.path.basename(fn), "aff_sym_" + os.path.basename(fn))
+    sidemat = np.diag([1, 1,1,1]) if side == "Left" else np.diag([-1, 1,1,1])
+    proj = np.linalg.inv(iimg.affine) @ Mmni @ sidemat @ rimg.affine
 
-    print("Processing", aff_fn)
-    img = nibabel.load(aff_fn)
+    out = scipy.ndimage.map_coordinates(iimg.get_fdata(), (proj @ kidx)[:3].reshape((3,) + rimg.shape), order=2)
+    affimg = nibabel.Nifti1Image(out.astype(np.float32), rimg.affine)
 
-    d = img.get_fdata(dtype=np.float32)
+    d = affimg.get_fdata(dtype=np.float32)
     d -= d.mean()
     d /= d.std()
 
@@ -234,27 +222,25 @@ for side in "L", "R":
     output = np.asarray(output[0,0]) * 255
     segmap = output.astype(np.uint8)
 
-    voxvol = np.abs(np.linalg.det(img.affine))
+    voxvol = np.abs(np.linalg.det(affimg.affine))
 
     roivol = segmap.sum() * voxvol / 255.
-    print("Volume in seg ", img.get_filename(), roivol)
+    roivol //= 1
+    print("Volume (mm3) in seg", side[0], roivol)
     stats_vols[(side, "r")] = roivol
 
     c = centr_mm[:,:3]
     v = np.cross(c[1] - c[0], c[2] - c[0])
     v /= np.linalg.norm(v)
 
-    pts = np.indices(img.shape).reshape(3, -1).T
+    pts = np.indices(affimg.shape).reshape(3, -1).T
     pts = np.hstack((pts,np.ones((pts.shape[0],1))))
-    #pts = pts @ img.affine.T
-    maybeflipMni = np.diag([-1, 1,1,1]) if "_sym_" in img.get_filename() else np.diag([1,1,1,1])
-    #pts = pts @ (Mmni @ img.affine).T
-    pts = pts @ (Mmni @ maybeflipMni @ img.affine).T
+    pts = pts @ (Mmni @ sidemat @ affimg.affine).T
 
     cpts = ( pts[:,:3]- c[0] )
     
     output = np.dot(cpts, v)
-    output = output.reshape(img.shape)
+    output = output.reshape(affimg.shape)
 
     slab_starts_mm = +25
     slab_ends_mm = +30
@@ -262,24 +248,33 @@ for side in "L", "R":
     slab = (slab_starts_mm <= output ) & (output <= slab_ends_mm)
 
     roislabvol = (segmap * slab).sum() * voxvol / 255.
-    print(" in slab", roislabvol)
+    roislabvol //= 1
+    print("            in slab", side[0], roislabvol)
     stats_vols[(side, "s")] = roislabvol
-
-    if 0:
-        nibabel.Nifti1Image(slab.astype(np.uint8), img.affine).to_filename(img.get_filename().replace(".nii.gz", "_slab.nii.gz"))
-        nibabel.Nifti1Image(segmap.astype(np.uint8), img.affine).to_filename(img.get_filename().replace(".nii.gz", "_roi.nii.gz"))
-    #print(img.get_filename().replace(".nii.gz", "_slab.nii.gz"))
     
     output_image = (segmap > 128).astype(np.uint8)
     output_image[slab == 1] += 2
-    nibabel.Nifti1Image(output_image, img.affine).to_filename(img.get_filename().replace(".nii.gz", "_slabroi.nii.gz"))
-    
-    make_webps(aff_fn)
-    #t fslview ../../partialnii/aff_sym_hirosaki_H31120.nii.gz /tmp/seg.nii /tmp/slab.nii &
 
-open(fn.replace(".nii.gz", "_slabroi_volumesLR.txt"), "w").write("%d,%d,%d,%d\n" % (stats_vols["L", "r"], stats_vols["L", "s"], stats_vols["R", "r"], stats_vols["R", "s"]))
+    slabimg = nibabel.Nifti1Image(output_image, affimg.affine)
 
+    # output as nifti
+    if 0:
+        slabimg.to_filename(fn.replace(".nii.gz", f"_roi{side}.nii.gz"))
+        affimg.to_filename(fn.replace(".nii.gz", f"_aff{side}.nii.gz"))
 
+    # output as pictures
+    if 1:
+        make_webps(aff_fn_img = affimg, slabimg = slabimg, outfn = fn.replace(".nii.gz", f"_roi{side}"))
+
+    idx_ = np.indices(iimg.shape).reshape(3, -1)
+    kidx_ = np.vstack([idx_, idx_[0]*0+1])
+    proj = np.linalg.inv(affimg.affine) @ sidemat @ np.linalg.inv(Mmni) @ iimg.affine
+    out = scipy.ndimage.map_coordinates(slabimg.get_fdata(), (proj @ kidx_)[:3].reshape((3,) + iimg.shape), order=0)
+    imgout = nibabel.Nifti1Image(out.astype(np.uint8), iimg.affine)
+    imgout.to_filename(fn.replace(".nii.gz", f"_slab_roi{side[0]}.nii.gz"))
+
+csvheader="left_masseter_volume,right_masseter_volume,left_masseter_inslab_volume,right_masseter_inslab_volume\n"
+open(fn.replace(".nii.gz", "_masseter_volumesLR.csv"), "w").write(csvheader + "%d,%d,%d,%d\n" % (stats_vols["Left", "r"], stats_vols["RightSym", "r"], stats_vols["Left", "s"], stats_vols["RightSym", "s"]))
 
 #sys.exit(1)
 
