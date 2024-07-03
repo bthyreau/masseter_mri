@@ -146,7 +146,6 @@ else:
 # Due to model limitation, the T1-MRI needs to have a resolution of 96x96x64 for the landmarks model to work, resample along axis
 i = np.mgrid[:img.shape[0]-1:96j, :img.shape[1]-1:96j, :img.shape[2]-1:64j ]
 
-print(i.shape)
 fake_affine = img.affine.copy()
 assert nibabel.aff2axcodes(img.affine) == ("P","S","R"), "Voxel orientation error: the landmarks code function assume some orientation. The downsampling code should be fixed, but why bother"
 

@@ -23,7 +23,6 @@ if [ $? -eq "1" ]; then echo "ANTs scripts not in path"; exit; fi
 cd $pth
 
 if [ ! -f ${a}_mni0Rigid.txt ]; then
-  echo "Missing $pth/${a}_mni0Rigid.txt"
   python ${scriptpath}/model_apply_head_and_onlyhead.py $ba
 fi
 
