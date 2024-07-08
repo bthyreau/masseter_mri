@@ -158,11 +158,9 @@ d /= d.std()
 
 net1.load_state_dict(torch.load(scriptpath + "/torchparams/myworking_model4.pt", map_location=device), strict=False)
 
-nibabel.Nifti1Image(d, fake_affine).to_filename("/tmp/d.nii.gz")
 with torch.no_grad():
     output = net1(torch.from_numpy(d.astype(np.float32)[None,None,:]).to(device))
 
-nibabel.Nifti1Image(np.rollaxis(np.asarray(output[0]), 0, 4), fake_affine).to_filename("/tmp/test2.nii.gz")
 output[output < .1] = 0
 output = np.asarray(output)
 centr_vox = np.array([scipy.ndimage.center_of_mass(m) + (1,) for m in output[0]])
@@ -199,6 +197,13 @@ fn = sys.argv[1]
 assert fn.endswith(".nii.gz")
 iimg = nibabel.load(fn)
 print(f"Processing {fn}")
+
+try:
+    tmpimg = nibabel.load( fn.replace(".nii.gz", "_brain_mask.nii.gz") )
+    mask_vol = (tmpimg.get_fdata() > .5).sum() * np.abs(np.linalg.det(tmpimg.affine))
+    print("eTIV volume: %d" % mask_vol)
+except:
+    mask_vol = 0
 
 stats_vols = {}
 for side in "Left", "RightSym":
@@ -272,8 +277,8 @@ for side in "Left", "RightSym":
     imgout = nibabel.Nifti1Image(out.astype(np.uint8), iimg.affine)
     imgout.to_filename(fn.replace(".nii.gz", f"_slab_roi{side[0]}.nii.gz"))
 
-csvheader="left_masseter_volume,right_masseter_volume,left_masseter_inslab_volume,right_masseter_inslab_volume\n"
-open(fn.replace(".nii.gz", "_masseter_volumesLR.csv"), "w").write(csvheader + "%d,%d,%d,%d\n" % (stats_vols["Left", "r"], stats_vols["RightSym", "r"], stats_vols["Left", "s"], stats_vols["RightSym", "s"]))
+csvheader="left_masseter_volume,right_masseter_volume,left_masseter_inslab_volume,right_masseter_inslab_volume,eTIV\n"
+open(fn.replace(".nii.gz", "_masseter_volumesLR.csv"), "w").write(csvheader + "%d,%d,%d,%d,%d\n" % (stats_vols["Left", "r"], stats_vols["RightSym", "r"], stats_vols["Left", "s"], stats_vols["RightSym", "s"], mask_vol))
 
 #sys.exit(1)
 
