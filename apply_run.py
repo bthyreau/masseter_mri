@@ -188,8 +188,13 @@ def read_mni0txt(filename_mni0txt):
 
 Mmni = read_mni0txt(fn.replace(".nii.gz", "_mni0Rigid.txt")) #"../../partialnii/hirosaki_H31120_mni0Affine.txt")
 
-rimg = nibabel.load(scriptpath + "/symboxR2.nii.gz")
-idx = np.indices(rimg.shape).reshape(3, -1)
+rimg_affine = np.asarray(
+ [[   0.0208,  -0.0034,   1.4998, -91.2165],
+  [  -1.5261,  -0.0000,   0.0204, 117.3678],
+  [   0.0000,   1.4999,   0.0034,-184.7892],
+  [   0.    ,   0.    ,   0.    ,   1.    ]])
+rimg_shape = (152, 128, 64)
+idx = np.indices(rimg_shape).reshape(3, -1)
 kidx = np.vstack([idx, idx[0]*0+1])
 
 
@@ -201,7 +206,7 @@ print(f"Processing {fn}")
 try:
     tmpimg = nibabel.load( fn.replace(".nii.gz", "_brain_mask.nii.gz") )
     mask_vol = (tmpimg.get_fdata() > .5).sum() * np.abs(np.linalg.det(tmpimg.affine))
-    print("eTIV volume: %d" % mask_vol)
+    #print("eTIV volume: %d" % mask_vol)
 except:
     mask_vol = 0
 
@@ -211,10 +216,10 @@ stats_vols = {}
 for side in "Left", "RightSym":
 
     sidemat = np.diag([1, 1,1,1]) if side == "Left" else np.diag([-1, 1,1,1])
-    proj = np.linalg.inv(iimg.affine) @ Mmni @ sidemat @ rimg.affine
+    proj = np.linalg.inv(iimg.affine) @ Mmni @ sidemat @ rimg_affine
 
-    out = scipy.ndimage.map_coordinates(iimg.get_fdata(), (proj @ kidx)[:3].reshape((3,) + rimg.shape), order=2)
-    affimg = nibabel.Nifti1Image(out.astype(np.float32), rimg.affine)
+    out = scipy.ndimage.map_coordinates(iimg.get_fdata(), (proj @ kidx)[:3].reshape((3,) + rimg_shape), order=2)
+    affimg = nibabel.Nifti1Image(out.astype(np.float32), rimg_affine)
 
     d = affimg.get_fdata(dtype=np.float32)
     d -= d.mean()
