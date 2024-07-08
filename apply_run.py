@@ -205,6 +205,8 @@ try:
 except:
     mask_vol = 0
 
+border_sum = 0
+
 stats_vols = {}
 for side in "Left", "RightSym":
 
@@ -276,9 +278,16 @@ for side in "Left", "RightSym":
     out = scipy.ndimage.map_coordinates(slabimg.get_fdata(), (proj @ kidx_)[:3].reshape((3,) + iimg.shape), order=0)
     imgout = nibabel.Nifti1Image(out.astype(np.uint8), iimg.affine)
     imgout.to_filename(fn.replace(".nii.gz", f"_slab_roi{side[0]}.nii.gz"))
+    border = out == 1
+    d = 8
+    border[d:-d,d:-d,d:-d] = 0
+    if b := border.sum() > 0:
+        border_sum += b
+        print(f"Warning: detected output for side {side} is close to border (less than {d} voxels away)")
 
-csvheader="left_masseter_volume,right_masseter_volume,left_masseter_inslab_volume,right_masseter_inslab_volume,eTIV\n"
-open(fn.replace(".nii.gz", "_masseter_volumesLR.csv"), "w").write(csvheader + "%d,%d,%d,%d,%d\n" % (stats_vols["Left", "r"], stats_vols["RightSym", "r"], stats_vols["Left", "s"], stats_vols["RightSym", "s"], mask_vol))
+
+csvheader="left_masseter_volume,right_masseter_volume,left_masseter_inslab_volume,right_masseter_inslab_volume,eTIV,close_to_border\n"
+open(fn.replace(".nii.gz", "_masseter_volumesLR.csv"), "w").write(csvheader + "%d,%d,%d,%d,%d,%d\n" % (stats_vols["Left", "r"], stats_vols["RightSym", "r"], stats_vols["Left", "s"], stats_vols["RightSym", "s"], mask_vol, border_sum > 0))
 
 #sys.exit(1)
 
