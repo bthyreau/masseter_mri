@@ -17,16 +17,13 @@ a=$(basename $a .gz)
 a=$(basename $a .nii)
 pth=$(dirname $1)
 
-which antsApplyTransforms > /dev/null
-if [ $? -eq "1" ]; then echo "ANTs scripts not in path"; exit; fi
-
 cd $pth
 
 if [ ! -f ${a}_mni0Rigid.txt ]; then
-  python ${scriptpath}/model_apply_head_and_onlyhead.py $ba
+  python3 ${scriptpath}/model_apply_head_and_onlyhead.py $ba
 fi
 
-python $scriptpath/apply_run.py ${a}.nii.gz
+python3 $scriptpath/apply_run.py ${a}.nii.gz
 
 #/bin/rm ${a}_roiLeft.nii.gz ${a}_roiRightSym.nii.gz
 cat << END > ${a}_index_webp.html
