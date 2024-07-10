@@ -22,5 +22,5 @@ echo "<a href=\"${pth}/all_masseter_volumes.csv\">all_masseter_volumes.csv</a><h
 
 for a in ${outfiles[@]}; do cat ${a/.nii.gz/_index_webp.html}; echo "<hr>"; done >> "${pth}/index.html"
 echo "filename,left_masseter_volume,right_masseter_volume,left_masseter_inslab_volume,right_masseter_inslab_volume,eTIV,close_to_border" > "${pth}/all_masseter_volumes.csv"
-for a in ${outfiles[@]}; do echo -n "$a,"; tail -n 1 "${a/.nii.gz/_masseter_volumesLR.csv}"; done >> "${pth}/all_masseter_volumes.csv"
+for a in ${outfiles[@]}; do echo -n "$a,"; [ -f ${a} ] && tail -n 1 "${a/.nii.gz/_masseter_volumesLR.csv}" || echo 0,0,0,0,0,1 ; done >> "${pth}/all_masseter_volumes.csv"
 echo "Done"
