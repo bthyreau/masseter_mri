@@ -136,7 +136,7 @@ assert fn.endswith(".nii.gz")
 img2 = nibabel.load(fn)
 
 if nibabel.aff2axcodes(img2.affine) != ("P","S","R"):
-    print("Reorienting internally")
+    #print("Reorienting internally")
     trn = nibabel.orientations.ornt_transform( nibabel.io_orientation(img2.affine), np.array([[1,-1], [2, 1], [0,1]]))
     img = nibabel.Nifti1Image(nibabel.orientations.apply_orientation(img2.dataobj, trn), img2.affine @ nibabel.orientations.inv_ornt_aff( trn, img2.shape)) #.to_filename("/tmp/test.nii.gz")
 else:
@@ -171,7 +171,7 @@ if np.any(np.isnan(centr_vox)):
 
 centr_mm = centr_vox @ fake_affine.T
 
-print("The three landmarks coordinates of the Camper plane:\n", centr_mm[:,:3])
+print(" The three landmarks coordinates of the Camper plane:\n", centr_mm[:,:3])
 del img, img2
 
 
@@ -201,7 +201,7 @@ kidx = np.vstack([idx, idx[0]*0+1])
 fn = sys.argv[1]
 assert fn.endswith(".nii.gz")
 iimg = nibabel.load(fn)
-print(f"Processing {fn}")
+#print(f"Processing {fn}")
 
 try:
     tmpimg = nibabel.load( fn.replace(".nii.gz", "_brain_mask.nii.gz") )
@@ -237,7 +237,7 @@ for side in "Left", "RightSym":
 
     roivol = segmap.sum() * voxvol / 255.
     roivol //= 1
-    print("Volume (mm3) in seg", side[0], roivol)
+    print(" Volume (mm3) in seg", side[0], roivol)
     stats_vols[(side, "r")] = roivol
 
     c = centr_mm[:,:3]
@@ -260,7 +260,7 @@ for side in "Left", "RightSym":
 
     roislabvol = (segmap * slab).sum() * voxvol / 255.
     roislabvol //= 1
-    print("            in slab", side[0], roislabvol)
+    #print("             in slab", side[0], roislabvol)
     stats_vols[(side, "s")] = roislabvol
     
     output_image = (segmap > 128).astype(np.uint8)

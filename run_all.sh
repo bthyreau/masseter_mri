@@ -11,6 +11,7 @@ outfiles=()
 for a in $@; do
 	if [ ${a} != ${a/slab_roi/} ]; then echo "ignoring file ${a}"; continue; fi
 	if [ ${a} != ${a/brain_mask/} ]; then echo "ignoring file ${a}"; continue; fi
+	echo "processing file ${a}"
 	$scriptpath/run.sh ${a}
 	outfiles+=(${a})
 done

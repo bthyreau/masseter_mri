@@ -384,9 +384,9 @@ for fname in sys.argv[1:]:
     MI = inv(M) * f3
     txt = """#Insight Transform File V1.0\nTransform: AffineTransform_float_3_3\nFixedParameters: 0 0 0\nParameters: """
     txt += " ".join(["%4.6f %4.6f %4.6f" % tuple(x) for x in MI[:3,:3].tolist()]) + " %4.6f %4.6f %4.6f\n" % (MI[0,3], MI[1,3], MI[2,3])
-    if 1:
+    if 0:
         open(outfilename.replace("_tiv.nii.gz", "_mni0Affine.txt"), "w").write(txt)
-    print("affine (cube-root of) condition number : ", np.linalg.cond(M)**(1./3))
+    #print("affine (cube-root of) condition number : ", np.linalg.cond(M)**(1./3))
 
     if 0: # To read back, eg.
         def read_mni0txt(filename_mni0txt):
