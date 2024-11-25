@@ -133,6 +133,32 @@ device = torch.device("cpu")
 import sys
 fn = sys.argv[1]
 assert fn.endswith(".nii.gz")
+if os.path.exists(fn.replace(".nii.gz", "_RightSym.nii.gz")):
+    # User did some manual resampling, we will only perform the minimal processing
+    print("Processing in resampled box space only")
+    net1.load_state_dict(torch.load(scriptpath + "/torchparams/_params_jaws3l2_00299_00000.pt", map_location=device))
+    for side in "Left", "RightSym":
+        affimg = nibabel.load(fn.replace(".nii.gz", f"_{side}.nii.gz"))
+        d = affimg.get_fdata(dtype=np.float32)
+        d -= d.mean()
+        d /= d.std()
+
+        with torch.no_grad():
+            output = net1(torch.from_numpy(d.astype(np.float32)[None,None,:]).to(device))
+
+        output[output < .5] = 0
+        output[output > .9] = 1
+        output = np.asarray(output[0,0]) * 255
+        segmap = output.astype(np.uint8)
+
+        voxvol = np.abs(np.linalg.det(affimg.affine))
+
+        roivol = segmap.sum() * voxvol / 255.
+        roivol //= 1
+        print("Volume (mm3) in seg", side[0], roivol)
+        nibabel.Nifti1Image(segmap, affimg.affine).to_filename(fn.replace(".nii.gz", f"_roi{side}.nii.gz"))
+    sys.exit("Early Quit")
+
 img2 = nibabel.load(fn)
 
 if nibabel.aff2axcodes(img2.affine) != ("P","S","R"):
