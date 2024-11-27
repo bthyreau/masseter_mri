@@ -23,18 +23,18 @@ if [ ! -f ${a}_mni0Rigid.txt ]; then
   python3 ${scriptpath}/model_apply_head_and_onlyhead.py $ba
 fi
 
-python3 $scriptpath/apply_run.py ${a}.nii.gz
+python3 $scriptpath/apply_run.py ${ba}
 
 #/bin/rm ${a}_roiLeft.nii.gz ${a}_roiRightSym.nii.gz
 cat << END > ${a}_index_webp.html
 <pre> <table style="color:white;background-color:black"> <thead> <tr><th colspan="4">${pth}/${a}</th></tr><tr> <th colspan="2">Left Side</th> <th colspan="2">Right Side (mirrored)</th> </tr> </thead>
 <tbody> <tr>
-  <td><img src="${pth}/${a%%.nii.gz}_roiLeft_COR.webp" alt="Left COR"></td>
-  <td><img src="${pth}/${a%%.nii.gz}_roiLeft_AX.webp" alt="Left AX"></td>
-  <td><img src="${pth}/${a%%.nii.gz}_roiRightSym_COR.webp" alt="Right Sym COR"></td>
-  <td><img src="${pth}/${a%%.nii.gz}_roiRightSym_AX.webp" alt="Right Sym AX"></td>
+  <td><img src="${a}_roiLeft_COR.webp" alt="Left COR"></td>
+  <td><img src="${a}_roiLeft_AX.webp" alt="Left AX"></td>
+  <td><img src="${a}_roiRightSym_COR.webp" alt="Right Sym COR"></td>
+  <td><img src="${a}_roiRightSym_AX.webp" alt="Right Sym AX"></td>
 </tr> </tbody> </table>
 volume (mm3)
 END
-cat ${a%%.nii.gz}_masseter_volumesLR.csv >> ${a}_index_webp.html
+cat ${a}_masseter_volumesLR.csv >> ${a}_index_webp.html
 echo "</pre>">> ${a}_index_webp.html

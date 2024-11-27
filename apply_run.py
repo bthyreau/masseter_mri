@@ -132,13 +132,13 @@ device = torch.device("cpu")
 
 import sys
 fn = sys.argv[1]
-assert fn.endswith(".nii.gz")
-if os.path.exists(fn.replace(".nii.gz", "_RightSym.nii.gz")):
+assert fn.replace(".nii.gz", ".nii").endswith(".nii")
+if os.path.exists(fn.replace(".nii.gz", ".nii").replace(".nii", "_RightSym.nii.gz")):
     # User did some manual resampling, we will only perform the minimal processing
     print("Processing in resampled box space only")
     net1.load_state_dict(torch.load(scriptpath + "/torchparams/_params_jaws3l2_00299_00000.pt", map_location=device))
     for side in "Left", "RightSym":
-        affimg = nibabel.load(fn.replace(".nii.gz", f"_{side}.nii.gz"))
+        affimg = nibabel.load(fn.replace(".nii.gz", ".nii").replace(".nii", f"_{side}.nii.gz"))
         d = affimg.get_fdata(dtype=np.float32)
         d -= d.mean()
         d /= d.std()
@@ -156,7 +156,7 @@ if os.path.exists(fn.replace(".nii.gz", "_RightSym.nii.gz")):
         roivol = segmap.sum() * voxvol / 255.
         roivol //= 1
         print("Volume (mm3) in seg", side[0], roivol)
-        nibabel.Nifti1Image(segmap, affimg.affine).to_filename(fn.replace(".nii.gz", f"_roi{side}.nii.gz"))
+        nibabel.Nifti1Image(segmap, affimg.affine).to_filename(fn.replace(".nii.gz", ".nii").replace(".nii", f"_roi{side}.nii.gz"))
     sys.exit("Early Quit")
 
 img2 = nibabel.load(fn)
@@ -212,7 +212,7 @@ def read_mni0txt(filename_mni0txt):
     p = np.array(open(filename_mni0txt).read().split("Parameters: ")[-1].split(), float)
     return np.r_[np.c_[ p[:9].reshape(3,3), p[9:] ], [[0,0,0,1]]] / f3
 
-Mmni = read_mni0txt(fn.replace(".nii.gz", "_mni0Rigid.txt")) #"../../partialnii/hirosaki_H31120_mni0Affine.txt")
+Mmni = read_mni0txt(fn.replace(".nii.gz", ".nii").replace(".nii", "_mni0Rigid.txt")) #"../../partialnii/hirosaki_H31120_mni0Affine.txt")
 
 rimg_affine = np.asarray(
  [[   0.0208,  -0.0034,   1.4998, -91.2165],
@@ -225,12 +225,12 @@ kidx = np.vstack([idx, idx[0]*0+1])
 
 
 fn = sys.argv[1]
-assert fn.endswith(".nii.gz")
+assert fn.replace(".nii.gz", ".nii").endswith(".nii")
 iimg = nibabel.load(fn)
 #print(f"Processing {fn}")
 
 try:
-    tmpimg = nibabel.load( fn.replace(".nii.gz", "_brain_mask.nii.gz") )
+    tmpimg = nibabel.load( fn.replace(".nii.gz", ".nii").replace(".nii", "_brain_mask.nii.gz") )
     mask_vol = (tmpimg.get_fdata() > .5).sum() * np.abs(np.linalg.det(tmpimg.affine))
     #print("eTIV volume: %d" % mask_vol)
 except:
@@ -296,19 +296,19 @@ for side in "Left", "RightSym":
 
     # output as nifti
     if 0:
-        slabimg.to_filename(fn.replace(".nii.gz", f"_roi{side}.nii.gz"))
-        affimg.to_filename(fn.replace(".nii.gz", f"_aff{side}.nii.gz"))
+        slabimg.to_filename(fn.replace(".nii.gz", ".nii").replace(".nii", f"_roi{side}.nii.gz"))
+        affimg.to_filename(fn.replace(".nii.gz", ".nii").replace(".nii", f"_aff{side}.nii.gz"))
 
     # output as pictures
     if 1:
-        make_webps(aff_fn_img = affimg, slabimg = slabimg, outfn = fn.replace(".nii.gz", f"_roi{side}"))
+        make_webps(aff_fn_img = affimg, slabimg = slabimg, outfn = fn.replace(".nii.gz", ".nii").replace(".nii", f"_roi{side}"))
 
     idx_ = np.indices(iimg.shape).reshape(3, -1)
     kidx_ = np.vstack([idx_, idx_[0]*0+1])
     proj = np.linalg.inv(affimg.affine) @ sidemat @ np.linalg.inv(Mmni) @ iimg.affine
     out = scipy.ndimage.map_coordinates(slabimg.get_fdata(), (proj @ kidx_)[:3].reshape((3,) + iimg.shape), order=0)
     imgout = nibabel.Nifti1Image(out.astype(np.uint8), iimg.affine)
-    imgout.to_filename(fn.replace(".nii.gz", f"_slab_roi{side[0]}.nii.gz"))
+    imgout.to_filename(fn.replace(".nii.gz", ".nii").replace(".nii", f"_slab_roi{side[0]}.nii.gz"))
     border = out == 1
     d = 8
     border[d:-d,d:-d,d:-d] = 0
@@ -318,7 +318,7 @@ for side in "Left", "RightSym":
 
 
 csvheader="left_masseter_volume,right_masseter_volume,left_masseter_inslab_volume,right_masseter_inslab_volume,eTIV,close_to_border\n"
-open(fn.replace(".nii.gz", "_masseter_volumesLR.csv"), "w").write(csvheader + "%d,%d,%d,%d,%d,%d\n" % (stats_vols["Left", "r"], stats_vols["RightSym", "r"], stats_vols["Left", "s"], stats_vols["RightSym", "s"], mask_vol, border_sum > 0))
+open(fn.replace(".nii.gz", ".nii").replace(".nii", "_masseter_volumesLR.csv"), "w").write(csvheader + "%d,%d,%d,%d,%d,%d\n" % (stats_vols["Left", "r"], stats_vols["RightSym", "r"], stats_vols["Left", "s"], stats_vols["RightSym", "s"], mask_vol, border_sum > 0))
 
 #sys.exit(1)
 
