@@ -23,10 +23,10 @@ pth=$(dirname $1)
 cd $pth
 
 if [ ! -f ${a}_mni0Rigid.txt ]; then
-  python3 ${scriptpath}/model_apply_head_and_onlyhead.py $ba
+  python3 $(dirname $r0)/model_apply_head_and_onlyhead.py $ba
 fi
 
-python3 $scriptpath/apply_run.py ${ba}
+python3 $(dirname $r0)/apply_run.py ${ba}
 
 #/bin/rm ${a}_roiLeft.nii.gz ${a}_roiRightSym.nii.gz
 cat << END > ${a}_index_webp.html
