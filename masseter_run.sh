@@ -1,4 +1,7 @@
 #!/bin/bash
+r0=$(realpath $0)
+PATH=$(dirname $r0)/.venv/bin/:$(dirname $r0)/venv/bin/:$PATH
+
 export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=4
 
 scriptpath=$(dirname $0)

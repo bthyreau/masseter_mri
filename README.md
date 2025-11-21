@@ -14,7 +14,12 @@ The input should be in nifti format. If you have DICOM data, you can convert it 
 
 The program needs to run on a [PyTorch](https://pytorch.org/get-started/locally/) python environment. A CPU version of Pytorch is sufficient.
 
-For e.g. to install using pip3 (works both Linux and MacOS)
+If you have the uv packaging tool ( https://docs.astral.sh/uv/ ), you can run
+`uv sync`
+
+which should take care of installing the dependencies.
+
+Otherwise, you need to configure a python 3 environment on your machine. For e.g. to install using pip3 (works both Linux and MacOS)
 ```
 pip3 install scipy nibabel pillow
 pip3 install torch
@@ -26,15 +31,15 @@ Then, download or clone this repository, assuming it is in `./masseter_mri-main`
 ### Single image processing
 You can run the segmentation of a single image simply by calling
 
-```/path/to/masseter_mri-main/run.sh example_t1wi.nii.gz```
+```masseter_run.sh example_t1wi.nii.gz```
 
-where `/path/to/masseter_mri-main/` should be the full path to this masseter_mri-main repository
+masseter_run.sh, or a symlink to it, can be made available in the $PATH.
 
 ### Cohort processing
 
 Multiple images can be analysed with the script:
-```/path/to/masseter_mri-main/run_all.sh *.nii.gz```
+```masseter_run_all.sh *.nii.gz```
 
-In this case, the script will creates (in the current directory) a ```index.html``` page for easy visualization of all the **segmentation masks**, and a summary csv table with the **volume** of the muscle (left and right) and the interesection with the plane. 
+In this case, the script will creates (in the current directory!) a ```index.html``` page for easy visualization of all the **segmentation masks**, and a summary csv table with the **volume** of the muscle (left and right) and the interesection with the plane. 
 
 For each file, the output files example_t1wi_slab_roiL.nii.gz are example_t1wi_slab_roiR.nii.gz, each containing the muscle on its respective side, as well as a cross-section plane mask mapping 2.5cm to 3cm below the estimated Camper plane.  For quick visualization purpose and quality checks, some animation similar to the one above are generated in .webp format.
