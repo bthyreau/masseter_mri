@@ -7,19 +7,17 @@
 
 This software expects a (mostly isotropic) 3D image of the head covering the masticatory muscle. It is based on a machine-learning (ConvNet) model trained on 3D T1-weighted MRIs of a cohort of subjects aged 50+, although it should work well on any population. 
 
-*More detail about the model and training approach (will be) described in Liu et al.*
+*More detail about the model and training approach (will be) described in Chen et al.*
 
-### Installation and requirements
-The input should be in nifti format. If you have DICOM data, you can convert it to nifti using [dcm2niix](https://github.com/rordenlab/dcm2niix)
+### Requirements
+The input MRI should be a T1-weighted image of the head, with a field-of-view that extends low enough to cover the masseter muscle area, and in nifti format. If your data is DICOM, you can easily convert it to nifti using [dcm2niix](https://github.com/rordenlab/dcm2niix). 
 
-The program needs to run on a [PyTorch](https://pytorch.org/get-started/locally/) python environment. A CPU version of Pytorch is sufficient.
+The program uses [PyTorch](https://pytorch.org/). A CPU version is sufficient, no GPU necessary
 
-If you have the uv packaging tool ( https://docs.astral.sh/uv/ ), you can simply run
-`uv sync`
+### Installation
+To install this program using the uv packaging tool ( https://docs.astral.sh/uv/ ), you can simply run `uv sync` in this repository, and it should take care of downloading and installing the dependencies.
 
-in this repository, and it should take care of downloading and installing the dependencies.
-
-Otherwise, you'll need to configure a python 3 environment on your machine. For e.g. to install using pip3 (works both Linux and MacOS)
+Alternatively, you'll need to configure a python 3 environment on your machine. For e.g. to install using pip3 (works both Linux and MacOS)
 ```
 pip3 install scipy nibabel pillow
 pip3 install torch
