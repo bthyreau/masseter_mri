@@ -5,7 +5,9 @@
 *Masticatory muscle (brown) and cross-section plane (green)*
 
 
-This software expects a (mostly isotropic) 3D image of the head covering the masticatory muscle. It is based on a machine-learning (ConvNet) model trained on 3D T1-weighted MRIs of a cohort of subjects aged 50+, although it should work well on any population. 
+This software expects a (mostly isotropic) 3D image of the head covering the masticatory muscles. It is based on a machine-learning (ConvNet) model trained on 3D T1-weighted MRIs of a cohort of subjects aged 50+, although it should work well on any population. 
+
+It is particularly suited for efficient processing of large neuroimaging MRI cohorts, and enabling retrospective extraction of that oral health–related phenotypes from existing datasets.
 
 *More detail about the model and training approach (will be) described in Chen et al.*
 
